@@ -3,6 +3,7 @@ import sys
 from random import choices
 import matplotlib.pyplot as plt
 import networkx as nx
+import progressbar
 
 
 class Vertex(object):
@@ -48,6 +49,10 @@ def genEdge(vertex, neighbor, vertices):
 
 
 def main():
+    bar = progressbar.ProgressBar(maxval=(num_of_vertices*max_degree), widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
+    bar.start()
+    bar_count = 1
+
     vertices = []
 
     states = ['In', 'Out', 'Both']
@@ -65,11 +70,18 @@ def main():
         vertices.append(v)
         v_state = choices(states, prob)
 
+        bar.update(bar_count)
+        bar_count += 1
+
     # visit all the vertices that can get In edge
     neighbors = list(vertices)
     for vertex in vertices:
         if vertex.state != ['In']:
             neighbor = chooseNeighbor(neighbors, vertex)
+
+            bar.update(bar_count)
+            bar_count += 1
+
             if neighbor is not None:
                 genEdge(vertex, neighbor, vertices)
                 neighbors.remove(neighbor)
@@ -81,6 +93,10 @@ def main():
                 neighbors = list(vertices)
                 neighbors.remove(vertex)
                 neighbor = chooseNeighbor(neighbors, vertex)
+
+                bar.update(bar_count)
+                bar_count += 1
+
                 if neighbor is not None:
                     genEdge(vertex, neighbor, vertices)
                 else:
@@ -91,9 +107,15 @@ def main():
         for vertex in vertices:
             for son in vertex.sons:
                 edge = '{},'.format(vertex.id).ljust(4) + '{},'.format(son[0].id).ljust(4) + 'T, {}\n'.format(son[1])
-                print(edge)
+                # print(edge)
                 outFile.write(edge)
 
+                bar.update(bar_count)
+                bar_count += 1
+
+    bar.finish()
+
+    '''
     # print the vertices and their in and out degree
     for v in vertices:
         print('Vertex id: {}'.format(v.id).ljust(20), 'Out degree: {}'.format(v.out_degree).ljust(17),
@@ -131,6 +153,7 @@ def main():
     nx.draw_networkx_labels(G, pos, font_size=10, font_family='sans-serif')
     plt.show()
     # plt.savefig(<wherever>)
+    '''
 
 
 if __name__ == "__main__":
