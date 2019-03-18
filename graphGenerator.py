@@ -9,6 +9,7 @@ import collections
 
 global_vertices = []
 global_in_vertices = []
+global_ins_only = []
 
 
 class Vertex(object):
@@ -35,9 +36,16 @@ class Vertex(object):
         return "<vertex {}>".format(self.id)
 
 
-def chooseSons(_vertex):
-    global need_second_choose
+def chooseSonFromIns(_vertex):
+    in_vertex = random.choice(global_ins_only)
 
+    if not global_vertices[in_vertex].has_father:
+        setEdge(_vertex, in_vertex)
+
+    global_ins_only.remove(in_vertex)
+
+
+def chooseSons(_vertex):
     while _vertex.out_degree < _vertex.max_degree:
         # we are choosing a son that has state of both or in
         curr_son_id = random.choice(global_in_vertices)
@@ -46,58 +54,51 @@ def chooseSons(_vertex):
         while (curr_son_id == _vertex.id) or (curr_son_id in _vertex.sons):
             curr_son_id = random.choice(global_in_vertices)
 
-        if is_weighted:
-            weight = random.randint(1, 1000)
-        else:
-            weight = 1
-
-        _vertex.sons[curr_son_id] = weight
-        _vertex.out_degree += 1
-
-        global_vertices[curr_son_id].has_father = True
-        global_vertices[curr_son_id].in_degree += 1
-        global_vertices[curr_son_id].fathers[_vertex.id] = weight
+        setEdge(_vertex, curr_son_id)
 
 
-def main(seed_cmd):
-    debug = 0
-    plot = 1
-
-    out_filename = 'graphs/edges{}-deg{}-seed{}'.format(num_of_vertices, max_degree, seed_cmd)
+def setEdge(_vertex, curr_son_id):
     if is_weighted:
-        out_filename += '-weighted'
+        weight = random.randint(1, 1000)
     else:
-        out_filename += '-unweighted'
+        weight = 1
 
+    _vertex.sons[curr_son_id] = weight
+    _vertex.out_degree += 1
+
+    global_vertices[curr_son_id].has_father = True
+    global_vertices[curr_son_id].in_degree += 1
+    global_vertices[curr_son_id].fathers[_vertex.id] = weight
+
+
+def main():
     print("\nStarting generate graph - {}\nStart step 1 (initialize the nodes)".format(out_filename[7:]))
 
     # initialize the nodes with state and maximum out degree
-    seed_init = seed_cmd
-    random.seed(seed_init)
-
+    random.seed(seed_num)
     print_count = int(num_of_vertices / 100)
 
     # the first vertex most be out
     v_state = ['Out']
     for v_id in range(num_of_vertices):
         if v_id % print_count == 0:
-            sys.stdout.write('%d \r' % v_id)
+            sys.stdout.write('{} ({}%) \r'.format(v_id, int((v_id / num_of_vertices) * 100)))
             sys.stdout.flush()
 
         # the last vertex most be in
         if v_id == num_of_vertices - 1:
             v_state = ['In']
-
         v_degree = random.randint(1, max_degree)
         if debug: print(v_degree)
 
         v = Vertex(v_id, v_state, v_degree)
         global_vertices.append(v)
-
-        if v_state == ['In'] or v_state == ['Both']:
+        if v_state == ['In']:
             global_in_vertices.append(v_id)
-
-        v_state = random.choices(['In', 'Out', 'Both'], [0.2, 0.2, 0.7])
+            global_ins_only.append(v_id)
+        elif v_state == ['Both']:
+            global_in_vertices.append(v_id)
+        v_state = random.choices(['In', 'Out', 'Both'], [0.1, 0.1, 0.8])
         if debug: print(v_state)
 
     print("Finish of step 1...\n\nStart step 2 (find a father for every node)")
@@ -105,36 +106,45 @@ def main(seed_cmd):
     # visit all the vertices that can get In edge, and associating a father....
     for i, vertex in enumerate(global_vertices):
         if i % print_count == 0:
-            sys.stdout.write('%d \r' % i)
+            sys.stdout.write('{} ({}%) \r'.format(i, int((i / num_of_vertices) * 100)))
             sys.stdout.flush()
 
         if vertex.state == ['Out'] or vertex.state == ['Both']:
             # means that node have son or more
             chooseSons(vertex)
 
-    print('Finish of step 2...\n\nStart step 3 (save to file)')
+    print('Finish of step 2...\n\nStart step 3 (make sure graph is connected)')
+    while len(global_ins_only) > 0:
+        sys.stdout.write('{} in vertices steel not verified as connected.. \r'.format(len(global_ins_only)))
+        sys.stdout.flush()
+
+        vertex = random.choice(global_vertices)
+        chooseSonFromIns(vertex)
+
+    ins_without_father = 0
+    for v_id in global_ins_only:
+        if not global_vertices[v_id].has_father:
+            ins_without_father += 1
+    print('num of in vertices that not has father: {} ({} %)'.format(ins_without_father, (
+                (ins_without_father / len(global_vertices)) * 100)))
+
+    print('Finish of step 3...\n\nStart step 4 (save to file)')
 
     # save in edges.csv file (GraphSim and Neo4j input)
-
     with open(out_filename + '.g', 'w') as outFile:
         for i, vertex in enumerate(global_vertices):
             if i % print_count == 0:
-                sys.stdout.write('%d \r' % i)
+                sys.stdout.write('{} ({}%) \r'.format(i, int((i / num_of_vertices) * 100)))
                 sys.stdout.flush()
 
             ordered_sons = collections.OrderedDict(sorted(vertex.sons.items()))
             for son, weight in ordered_sons.items():
                 edge = '{},'.format(vertex.id) + '{},'.format(son) + 'T,{}\n'.format(weight)
-
                 # if i == len(vertices)-2 and j == len(vertex.sons)-1:
                 # edge = edge[:-1]
-
                 outFile.write(edge)
-                # print(edge)
-
     outFile.close()
-
-    print('Finish of step 3...')
+    print('Finish step 4')
 
     if debug:
         # print the vertices and their in and out degree
@@ -153,7 +163,7 @@ def main(seed_cmd):
                 print('(father: {}, weight: {})'.format(k, val), end=', ')
         print()
 
-        # print adjacency matrix and prepare network graph
+        # print adjacency matrix
         print('In\Out'.ljust(4), end=' ')
         for i in range(len(global_vertices)):
             print(str(i).ljust(4), end=' ')
@@ -170,10 +180,10 @@ def main(seed_cmd):
             print()
 
     if plot:
-        print('\n\nStart step 4 (plotting the graph)')
+        print('\n\nStart step 5 (plotting the graph')
         # plot network graph
         G = nx.Graph().to_directed()
-        for i,vertex in enumerate(global_vertices):
+        for i, vertex in enumerate(global_vertices):
             if i % print_count == 0:
                 sys.stdout.write('%d \r' % i)
                 sys.stdout.flush()
@@ -182,7 +192,7 @@ def main(seed_cmd):
                 G.add_edge(vertex.id, s, weight=w)
 
         e = [(u, v) for (u, v, d) in G.edges(data=True)]
-        pos = nx.layout.random_layout(G)
+        pos = nx.layout.spring_layout(G)
         nx.draw(G, pos)
         labels = nx.get_edge_attributes(G, 'weight')
         nx.draw_networkx_nodes(G, pos, node_size=10)
@@ -194,17 +204,25 @@ def main(seed_cmd):
 
 
 if __name__ == "__main__":
-    is_weighted = False
-    argv = sys.argv[1:]
+    debug = 0
+    plot = 0
 
+    argv = sys.argv[1:]
+    is_weighted = False
     num_of_vertices = int(argv[0])
     max_degree = int(argv[1])
-    seed_num = (int(argv[2]))
+    seed_num = int(argv[2])
 
     if len(argv) > 3:
         is_weighted = True
 
+    out_filename = 'graphs/edges{}-deg{}-seed{}'.format(num_of_vertices, max_degree, seed_num)
+    if is_weighted:
+        out_filename += '-weighted'
+    else:
+        out_filename += '-unweighted'
+
     start = time.time()
-    main(seed_num)
+    main()
     end = time.time()
     print('\nExecution time {} seconds'.format(end - start))
