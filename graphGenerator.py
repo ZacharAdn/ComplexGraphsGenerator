@@ -200,7 +200,7 @@ def main():
         nx.draw_networkx_edge_labels(G, pos, edge_labels=labels, font_size=10)
         nx.draw_networkx_labels(G, pos, font_size=10, font_family='sans-serif')
         plt.show()
-        # plt.savefig(<wherever>)
+        # plt.savefig(<save_dir>)
 
 
 if __name__ == "__main__":
