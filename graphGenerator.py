@@ -146,7 +146,7 @@ def main():
     outFile.close()
     print('Finish step 4')
 
-    if debug:
+    if debug2:
         # print the vertices and their in and out degree
         for v in global_vertices:
             print('\n\n\nVertex id: {}'.format(v.id).ljust(20), 'state: {}'.format(v.state).ljust(10),
@@ -204,7 +204,7 @@ def main():
 
 
 if __name__ == "__main__":
-    debug = 0
+    debug, debug2 = 0, 0
     plot = 0
 
     argv = sys.argv[1:]
