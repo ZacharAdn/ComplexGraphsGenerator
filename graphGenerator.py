@@ -85,7 +85,7 @@ def main():
     print_count = int(num_of_vertices / 100)
 
     # the first vertex most be out
-    v_state = ['Out']
+    v_state = Out
     for v_id in range(num_of_vertices):
         if num_of_vertices > 100:
             if v_id % print_count == 0:
@@ -94,16 +94,16 @@ def main():
 
         # the last vertex most be in
         if v_id == num_of_vertices - 1:
-            v_state = ['In']
+            v_state = In
         v_degree = random.randint(1, max_degree)
         if debug: print(v_degree)
 
         v = Vertex(v_id, v_state, v_degree)
         global_vertices.append(v)
-        if v_state == ['In']:
+        if v_state == In:
             global_in_vertices.append(v_id)
             global_ins_only.append(v_id)
-        elif v_state == ['Both']:
+        elif v_state == Both:
             global_in_vertices.append(v_id)
         v_state = random.choices(['In', 'Out', 'Both'], [0.1, 0.1, 0.8])
         if debug: print(v_state)
@@ -131,7 +131,7 @@ def main():
                 sys.stdout.write('{} ({}%) \r'.format(i, int((i / num_of_vertices) * 100)))
                 sys.stdout.flush()
 
-        if vertex.state == ['Out'] or vertex.state == ['Both']:
+        if vertex.state == Out or vertex.state == Both:
             # means that node have son or more
             chooseSons(vertex)
 
@@ -150,8 +150,6 @@ def main():
             ordered_sons = collections.OrderedDict(sorted(vertex.sons.items()))
             for son, weight in ordered_sons.items():
                 edge = '{},'.format(vertex.id) + '{},'.format(son) + 'T,{}\n'.format(weight)
-                # if i == len(vertices)-2 and j == len(vertex.sons)-1:
-                # edge = edge[:-1]
                 outFile.write(edge)
     outFile.close()
     print('Finish step 4')
@@ -191,6 +189,7 @@ def main():
 
     if plot:
         print('\n\nStart step 5 (plotting the graph')
+
         # plot network graph
         G = nx.Graph().to_directed()
         for i, vertex in enumerate(global_vertices):
@@ -220,6 +219,7 @@ if __name__ == "__main__":
     argv = sys.argv[1:]
     is_weighted = False
     graph_format = 'graphsim'
+    In, Out, Both = ['In', 'Out', 'Both']
 
     print(argv)
     for i, arg in enumerate(argv):
